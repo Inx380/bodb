@@ -39,6 +39,7 @@ namespace bo
 			, FCT_ISNULL
 			, FCT_ISNOTNULL
 			, FCT_BETWEENAND
+			, FCT_LIKE
 
 			, FCT_UNKNOWN		= 0xf
 		};
@@ -65,7 +66,7 @@ namespace bo
 		const CFieldVariant::pointer& compareVariant(void) const {return m_compareVariant;}
 		short whereLevel(void) const {return m_nWhereLevel;}
 
-		bool doCompare(CFieldVariant::pointer doCompareVariant)
+		bool doCompare(const CFieldVariant::pointer& doCompareVariant)
 		{
 			BOOST_ASSERT (doCompareVariant.get() != 0);
 
@@ -101,6 +102,9 @@ namespace bo
 				break;
 			case FCT_ISNOTNULL:
 				result = doCompareVariant->isNotNull();
+				break;
+			case FCT_LIKE:
+				result = doCompareVariant->isLike(m_compareVariant);
 				break;
 			default:
 				break;

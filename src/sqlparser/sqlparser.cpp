@@ -1,6 +1,6 @@
 /*
     The sqlparser library parse the SQL (Structured Query Language)
-    Copyright (C) 2009-2010  Akee Yang <akee.yang@gmail.com>
+    Copyright (C) 2009-2014  Akee Yang <akee.yang@gmail.com>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -551,7 +551,7 @@ bool GetItemWheres(const char * pBuffer, tagSP * outSP, int & outLeftIndex, bool
 		// IS NULL - IS NOT NULL
 		// BETWEEN a AND b
 		// IN (a,b,c)
-		// NOT LIKE
+		// NOT LIKE - LIKE
 		// = (SELECT ...)
 		// IN (SELECT ...)
 		// =[.] ALL[ANY] (SELECT...)
@@ -564,14 +564,15 @@ bool GetItemWheres(const char * pBuffer, tagSP * outSP, int & outLeftIndex, bool
 		{
 			leftoffset += leftIndex+7;
 			whereHandle->compare_type = COMPARE_ISNULL;
+		}else if (strCompare(pBuffer+leftoffset, "LIKE", leftIndex))
+		{
+			leftoffset += leftIndex+4;
+			whereHandle->compare_type = COMPARE_LIKE;
 		}else if (strCompare(pBuffer+leftoffset, "BETWEEN", leftIndex))
 		{
 			leftoffset += leftIndex+7;
 			whereHandle->compare_type = COMPARE_BETWEENAND;
-
-
 			// ???
-
 		}else if (strCompare(pBuffer+leftoffset, "=", leftIndex))
 		{
 			leftoffset += leftIndex+1;
@@ -601,18 +602,28 @@ bool GetItemWheres(const char * pBuffer, tagSP * outSP, int & outLeftIndex, bool
 			return false;
 		}
 
-		if (whereHandle->compare_type <= COMPARE_LESSEQUAL)
+		switch (whereHandle->compare_type)
 		{
-			// <column_value>
-			tagItemValue * itemValue = new tagItemValue;
-			memset(itemValue, 0, sizeof(tagItemValue));
-			whereHandle->value_handle = itemValue;
-
-			if (!GetItemValue(pBuffer+leftoffset, itemValue, leftIndex))
+		case COMPARE_EQUAL:
+		case COMPARE_UNEQUAL:
+		case COMPARE_GREATER:
+		case COMPARE_GREATEREQUAL:
+		case COMPARE_LESS:
+		case COMPARE_LESSEQUAL:
+		case COMPARE_LIKE:
 			{
-				return false;
+				// <column_value>
+				tagItemValue * itemValue = new tagItemValue;
+				memset(itemValue, 0, sizeof(tagItemValue));
+				whereHandle->value_handle = itemValue;
+				if (!GetItemValue(pBuffer+leftoffset, itemValue, leftIndex))
+				{
+					return false;
+				}
+				leftoffset += leftIndex;
 			}
-			leftoffset += leftIndex;
+		default:
+			break;
 		}
 
 		if (nWhereLevel>0&& strCompare(pBuffer+leftoffset, ")", leftIndex))
@@ -2107,6 +2118,7 @@ void free_item(tagItem * item)
 					case COMPARE_GREATEREQUAL:
 					case COMPARE_LESS:
 					case COMPARE_LESSEQUAL:
+					case COMPARE_LIKE:
 						{
 							tagItemValue * itemValue = (tagItemValue*)buffer->value_handle;
 							if (itemValue != 0)

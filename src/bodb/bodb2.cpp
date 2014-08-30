@@ -737,6 +737,8 @@ namespace bo
 			return CFieldCompare::FCT_ISNOTNULL;
 		case COMPARE_BETWEENAND:
 			return CFieldCompare::FCT_BETWEENAND;
+		case COMPARE_LIKE:
+			return CFieldCompare::FCT_LIKE;
 		default:
 			// ??
 			break;
@@ -804,6 +806,7 @@ namespace bo
 			case COMPARE_GREATEREQUAL:
 			case COMPARE_LESS:
 			case COMPARE_LESSEQUAL:
+			case COMPARE_LIKE:
 				{
 					tagItemValue * itemValue = (tagItemValue*)pWhere->value_handle;
 					if (itemValue == 0)
