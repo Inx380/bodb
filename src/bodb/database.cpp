@@ -317,6 +317,56 @@ namespace bo
 								m_fdb.read((char*)&bufferIndex, INTEGER_SIZE);
 								m_fdb.read((char*)&realSize, SMALLINT_SIZE);
 
+								CResultSet::pointer tableResultSet;
+								m_results.find(tableInfo.get(), tableResultSet);
+								BOOST_ASSERT (tableResultSet.get() != 0);
+								if (tableResultSet.get()==NULL)
+								{
+									// error
+									//if (pageHeadInfo->subtype() != CPageHeadInfo::PST_8000)
+									//{
+									//	//m_fdb.seekg(PAGE_BLOCK_SIZE*(pageHeadInfo->id())+offset, std::ios::beg);
+									//	//writeBlackNull(m_fdb, (INTEGER_SIZE*3)+SMALLINT_SIZE);	// (recordId+fieldId+bufferIndex)+realSize
+									//	m_fdb.seekg(PAGE_BLOCK_SIZE*(pageHeadInfo->id()+1)-SMALLINT_SIZE*readIndex, std::ios::beg);
+									//	writeBlackNull(m_fdb, SMALLINT_SIZE);					// readIndex
+									//}
+									tableInfo->m_data2pages.remove(pageHeadInfo->id());
+									UnUsePage(pageHeadInfo);
+									break;
+								}
+								CRecordLine::pointer recordLine = tableResultSet->getRecord(recordId);
+								BOOST_ASSERT (recordLine.get() != 0);
+								if (recordLine.get()==NULL)
+								{
+									// error
+									//if (pageHeadInfo->subtype() != CPageHeadInfo::PST_8000)
+									//{
+									//	//m_fdb.seekg(PAGE_BLOCK_SIZE*(pageHeadInfo->id())+offset, std::ios::beg);
+									//	//writeBlackNull(m_fdb, (INTEGER_SIZE*3)+SMALLINT_SIZE);	// (recordId+fieldId+bufferIndex)+realSize
+									//	m_fdb.seekg(PAGE_BLOCK_SIZE*(pageHeadInfo->id()+1)-SMALLINT_SIZE*readIndex, std::ios::beg);
+									//	writeBlackNull(m_fdb, SMALLINT_SIZE);					// readIndex
+									//}
+									tableInfo->m_data2pages.remove(pageHeadInfo->id());
+									UnUsePage(pageHeadInfo);
+									break;
+								}
+								CFieldVariant::pointer fieldVariant = recordLine->getVariant(fieldId);
+								BOOST_ASSERT (fieldVariant.get() != 0);
+								if (fieldVariant.get()==NULL)
+								{
+									// error
+									//if (pageHeadInfo->subtype() != CPageHeadInfo::PST_8000)
+									//{
+									//	//m_fdb.seekg(PAGE_BLOCK_SIZE*(pageHeadInfo->id())+offset, std::ios::beg);
+									//	//writeBlackNull(m_fdb, (INTEGER_SIZE*3)+SMALLINT_SIZE);	// (recordId+fieldId+bufferIndex)+realSize
+									//	m_fdb.seekg(PAGE_BLOCK_SIZE*(pageHeadInfo->id()+1)-SMALLINT_SIZE*readIndex, std::ios::beg);
+									//	writeBlackNull(m_fdb, SMALLINT_SIZE);					// readIndex
+									//}
+									tableInfo->m_data2pages.remove(pageHeadInfo->id());
+									UnUsePage(pageHeadInfo);
+									break;
+								}
+
 								CRecordDOIs::pointer recordDOIs;
 								if (!tableInfo->m_recordfdois.find(recordId, recordDOIs))
 								{
@@ -330,14 +380,6 @@ namespace bo
 									recordDOIs->m_dois.insert(fieldId, fieldDOIs);
 								}
 								fieldDOIs->m_dois.add(CData2OffsetInfo::create(pageHeadInfo, offset, readIndex-1));
-
-								CResultSet::pointer tableResultSet;
-								m_results.find(tableInfo.get(), tableResultSet);
-								BOOST_ASSERT (tableResultSet.get() != 0);
-								CRecordLine::pointer recordLine = tableResultSet->getRecord(recordId);
-								BOOST_ASSERT (recordLine.get() != 0);
-								CFieldVariant::pointer fieldVariant = recordLine->getVariant(fieldId);
-								BOOST_ASSERT (fieldVariant.get() != 0);
 
 								switch (fieldVariant->VARTYPE)
 								{
@@ -392,14 +434,27 @@ namespace bo
 				m_unusepages.add(pageHeadInfo);
 				break;
 			default:
-				BOOST_ASSERT (false);
-				break;
+				{
+					BOOST_ASSERT (false);
+					// error pagehead info.
+					// add by hd, 2014-10-24
+					pageHeadInfo->id(i);
+					UnUsePage(pageHeadInfo);
+					m_fdb.seekg(PAGE_BLOCK_SIZE*(i+1), std::ios::beg);
+				}break;
 			}
-
 		}
 
 	}
 
+	void CDatabase::UnUsePage(const CPageHeadInfo::pointer& pageHeadInfo)
+	{
+		pageHeadInfo->reset();
+		m_fdb.seekp(PAGE_BLOCK_SIZE*pageHeadInfo->id(), std::ios::beg);
+		pageHeadInfo->Serialize(true, m_fdb);
+		writeBlackNull(m_fdb, PAGE_BLOCK_SIZE-MAX_PAGEHEADINFO_SIZE);
+		m_unusepages.add(pageHeadInfo);
+	}
 	void CDatabase::close(void)
 	{
 		// ??? do m_modifys
@@ -1888,11 +1943,11 @@ namespace bo
 					break;
 				}
 
-				uinteger recordId = recordLine->id();
-				uinteger fieldId = recordLine->getFieldId();
+				const uinteger recordId = recordLine->id();
+				const uinteger fieldId = recordLine->getFieldId();
 				while (towriteSize > writedSize)
 				{
-					uinteger unwritesize = towriteSize - writedSize;
+					const uinteger unwritesize = towriteSize - writedSize;
 					CPageHeadInfo::PageHeadSubType1 subtype = CPageHeadInfo::PST_8000;
 					usmallint needSize = 0;
 					//if (unwritesize >= (PAGE_BLOCK_SIZE-MAX_PAGEHEADINFO_SIZE))
@@ -1932,7 +1987,7 @@ namespace bo
 						}
 					}
 					const char * writeBuffer = towriteBuffer + writedSize;
-					usmallint writeSize = unwritesize > needSize ? needSize : unwritesize;
+					const usmallint writeSize = unwritesize > needSize ? needSize : unwritesize;
 					CPageHeadInfo::pointer pageHeadInfo = tableInfo->findData2Page(needSize+SMALLINT_SIZE*2+INTEGER_SIZE*3, subtype);
 					if (pageHeadInfo.get() == 0)
 					{

@@ -95,6 +95,7 @@ namespace bo
 		//CPageHeadInfo::pointer findInfoPage(usmallint needSize);
 		CPageHeadInfo::pointer findTableInfoPage(usmallint needSize);
 		CPageHeadInfo::pointer findFieldInfoPage(usmallint needSize);
+		void UnUsePage(const CPageHeadInfo::pointer& pageHeadInfo);
 
 	private:
 		CDatabaseInfo::pointer	m_dbinfo;
