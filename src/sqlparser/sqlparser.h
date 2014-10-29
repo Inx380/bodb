@@ -263,6 +263,8 @@ struct tagSP
 	tagItems *			orderbys;
 	short				orderbydesc;
 	void *				parameter;
+	bo::bigint			limit;
+	bo::bigint			offset;
 };
 
 

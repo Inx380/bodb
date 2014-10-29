@@ -665,7 +665,7 @@ bool GetItemWheres(const char * pBuffer, tagSP * outSP, int & outLeftIndex, bool
 	outLeftIndex = leftoffset;
 	return true;
 }
-bool GetOrderBys(const char * pBuffer, tagSP * outSP)
+bool GetOrderBys(const char * pBuffer, tagSP * outSP, int & outLeftIndex)
 {
 	int leftoffset = 0;
 	int leftIndex = 0;
@@ -704,7 +704,66 @@ bool GetOrderBys(const char * pBuffer, tagSP * outSP)
 			}
 		}
 	}
+	outLeftIndex = leftoffset;
 	return true;
+}
+bool GetOffsetLimit(const char * pBuffer, tagSP * outSP)
+{
+	int leftoffset = 0;
+	int leftIndex = 0;
+	short wordLen = 0;
+	bool bResult = true;
+	char * tempBuffer;
+
+	tempBuffer = new char[MAX_ITEM_STRING_SIZE];
+	bool bFindLimit = false;
+	bool bFindOffset = false;
+	while (true)
+	{
+		if (!strGetWord(pBuffer+leftoffset, tempBuffer, leftIndex, &wordLen))
+		{
+			break;
+		}
+		leftoffset += leftIndex+wordLen+1;
+
+		if (strCompare(tempBuffer, "OFFSET", leftIndex))
+		{
+			char * tempBuffer2 = new char[MAX_ITEM_STRING_SIZE];
+			if (strGetWordNumber(pBuffer+leftoffset, tempBuffer2, leftIndex, &wordLen))
+			{
+				leftoffset += leftIndex+wordLen;
+				outSP->offset = bo_atoi64(tempBuffer2);
+				delete[] tempBuffer2;
+			}else
+			{
+				delete[] tempBuffer2;
+				bResult = false;
+				break;
+			}
+			bFindOffset = true;
+			if (bFindLimit)
+				break;
+		}else if (strCompare(tempBuffer, "LIMIT", leftIndex))
+		{
+			char * tempBuffer2 = new char[MAX_ITEM_STRING_SIZE];
+			if (strGetWordNumber(pBuffer+leftoffset, tempBuffer2, leftIndex, &wordLen))
+			{
+				leftoffset += leftIndex+wordLen;
+				outSP->limit = bo_atoi64(tempBuffer2);
+				delete[] tempBuffer2;
+			}else
+			{
+				delete[] tempBuffer2;
+				bResult = false;
+				break;
+			}
+			bFindLimit = true;
+			if (bFindOffset)
+				break;
+		}
+	}
+	delete[] tempBuffer;
+	return bResult;
 }
 
 tagField * GetFieldItem(const char * sql, int & offset)
@@ -1144,7 +1203,6 @@ tagSP * parse_exec(const char * sql)
 		result = new tagSP;
 		memset(result, 0, sizeof(tagSP));
 		result->sql_command = SQLCOM_SELECT;
-
 	}else if (strCompare(sql, "CREATE", leftIndex))
 	{
 		leftoffset = leftIndex+7;
@@ -1314,6 +1372,9 @@ tagSP * parse_exec(const char * sql)
 
 	if (result == 0)
 		return result;
+	//// default
+	//result->limit = -1;
+	//result->offset = -1;
 
 	char * tempBuffer = new char[MAX_ITEM_STRING_SIZE];
 	if (result->sql_command != SQLCOM_SELECT)
@@ -1482,7 +1543,16 @@ tagSP * parse_exec(const char * sql)
 			if (!bGetWhereKeyword)
 			{
 				if (bGetOrderKeyword)
-					GetOrderBys(sql+leftoffset, result);
+				{
+					GetOrderBys(sql+leftoffset, result, leftIndex);
+					leftoffset += leftIndex;
+				}
+				if (!GetOffsetLimit(sql+leftoffset, result))
+				{
+					parse_free(result);
+					result = 0;
+					return result;
+				}
 				break;
 			}
 
@@ -1493,11 +1563,19 @@ tagSP * parse_exec(const char * sql)
 				result = 0;
 				return result;
 			}
+			leftoffset += leftIndex;
 			if (bGetOrderKeyword)
 			{
 				// WHERE后面带的ORDER
+				GetOrderBys(sql+leftoffset, result, leftIndex);
 				leftoffset += leftIndex;
-				GetOrderBys(sql+leftoffset, result);
+			}
+			//// LIMIT X OFFSET Y
+			if (!GetOffsetLimit(sql+leftoffset, result))
+			{
+				parse_free(result);
+				result = 0;
+				return result;
 			}
 		}break;
 	case SQLCOM_DELETE:

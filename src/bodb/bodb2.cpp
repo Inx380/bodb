@@ -175,6 +175,8 @@ namespace bo
 
 						bool distinct = sp->parameter == (void*)1;
 						CResultSet::pointer rs = CDbService::select(tableInfo, topwheres, false);
+						rs->OrderBy(orderbys, sp->orderbydesc==1);
+						rs->LimitOffset(sp->offset, sp->limit);
 						result = rs->size();
 
 						if (outResultSet == 0)
@@ -188,7 +190,6 @@ namespace bo
 							(*outResultSet)->rsvalues = new PRECORDLINE[result];
 						}
 
-						rs->OrderBy(orderbys, sp->orderbydesc==1);
 						CRecordLine::pointer recordLine = rs->moveFirst();
 						while (recordLine.get() != 0)
 						{
