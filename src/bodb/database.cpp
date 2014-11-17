@@ -51,12 +51,19 @@ namespace bo
 		return m_path;
 	}
 
+	CDatabase::CDatabase(void)
+		: m_killed(false), m_proc(0)
+		, m_curpageid(0)
+	{
+		m_bLoadError = false;
+	}
 	CDatabase::CDatabase(const CDatabaseInfo::pointer& dbinfo)
 		: m_dbinfo(dbinfo)
 		, m_killed(false), m_proc(0)
 		, m_curpageid(0)
 	{
 
+		m_bLoadError = false;
 		BOOST_ASSERT (m_dbinfo.get() != 0);
 	}
 	CDatabase::~CDatabase(void)
@@ -125,6 +132,7 @@ namespace bo
 			return false;
 		}
 
+		m_bLoadError = false;
 		//loadDbfile(CPageHeadInfo::PHT_INFO|CPageHeadInfo::PHT_DATA);
 		loadDbfile(CPageHeadInfo::PHT_INFO);
 		loadDbfile(CPageHeadInfo::PHT_DATA);
@@ -139,7 +147,7 @@ namespace bo
 			sprintf(lpszBuffer,"open file ok =%s\n",dbfilename.c_str());
 			fwrite(lpszBuffer,1,strlen(lpszBuffer),theLogFile);
 #endif
-		return true;
+		return !m_bLoadError;
 	}
 
 	void CDatabase::loadDbfile(uinteger pht)
@@ -322,6 +330,7 @@ namespace bo
 								BOOST_ASSERT (tableResultSet.get() != 0);
 								if (tableResultSet.get()==NULL)
 								{
+									m_bLoadError = true;
 									// error
 									//if (pageHeadInfo->subtype() != CPageHeadInfo::PST_8000)
 									//{
@@ -338,6 +347,7 @@ namespace bo
 								BOOST_ASSERT (recordLine.get() != 0);
 								if (recordLine.get()==NULL)
 								{
+									m_bLoadError = true;
 									// error
 									//if (pageHeadInfo->subtype() != CPageHeadInfo::PST_8000)
 									//{
@@ -354,6 +364,7 @@ namespace bo
 								BOOST_ASSERT (fieldVariant.get() != 0);
 								if (fieldVariant.get()==NULL)
 								{
+									m_bLoadError = true;
 									// error
 									//if (pageHeadInfo->subtype() != CPageHeadInfo::PST_8000)
 									//{
@@ -1941,6 +1952,11 @@ namespace bo
 					}break;
 				default:
 					break;
+				}
+				if (towriteBuffer==0)
+				{
+					fieldVariant = recordLine->moveNext();
+					continue;
 				}
 
 				const uinteger recordId = recordLine->id();

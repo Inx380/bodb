@@ -79,6 +79,7 @@ namespace bo
 	public:
 		void do_proc_db(void);
 
+		CDatabase(void);
 		CDatabase(const CDatabaseInfo::pointer& dbinfo);
 		virtual ~CDatabase(void);
 
@@ -103,6 +104,7 @@ namespace bo
 		bool m_killed;
 		boost::thread * m_proc;
 		tfstream	m_fdb;
+		bool		m_bLoadError;
 
 		// resultset
 		CLockMap<void*, CResultSet::pointer> m_results;	// CTableInfo*
