@@ -1144,11 +1144,13 @@ namespace bo
 					if (itersub == wheresub.begin())
 					{
 						compareAndSub = compareAnd;
-					}else if (!compareResultSub && compareAnd && (compareWhereLevel == nWhereLevel || nWhereLevel==0))
+					}else if (!compareResultSub && compareAnd && (compareWhereLevel == nWhereLevel || compareWhereLevel==0))
+					//}else if (!compareResultSub && compareAnd && (compareWhereLevel == nWhereLevel || nWhereLevel==0))
 					{
 						// FALSE
 						break;
-					}else if (compareResultSub && !compareAnd && nWhereLevel == 0)
+					}else if (compareResultSub && !compareAnd && compareWhereLevel == 0)
+					//}else if (compareResultSub && !compareAnd && nWhereLevel == 0)
 					{
 						// TRUE
 						break;
