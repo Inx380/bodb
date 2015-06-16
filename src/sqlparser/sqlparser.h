@@ -74,6 +74,7 @@ enum enum_parameter_type
 	, PARAMETER_DROPTABLE
 	, PARAMETER_ADDCOLUMN, PARAMETER_MODIFYCOLUMN, PARAMETER_DROPCOLUMN
 	, PARAMETER_COLUMNSETDEFAULT, PARAMETER_COLUMNDROPDEFAULT
+	, PARAMETER_SET
 };
 
 enum enum_compare_type
@@ -249,6 +250,7 @@ struct tagParameter
 {
 	enum_parameter_type	param_type;
 	void *				parameter;
+	void *				parameter2;
 };
 
 struct tagSP

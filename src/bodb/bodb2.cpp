@@ -678,6 +678,45 @@ namespace bo
 					}break;
 				case SQLCOM_ALTER_DATABASE:
 					{
+						// 
+						if (sp->dbname != 0)
+						{
+							if (!CDbService::use(sp->dbname))
+								break;
+						}
+
+						for (short i=0; i<sp->items->itemcount; i++)
+						{
+							tagParameter * item = (tagParameter*)sp->items->items[i]->item_handle;
+
+							switch (item->param_type)
+							{
+							case PARAMETER_RENAME:
+								{
+									char * newname = (char*)item->parameter;
+									if (newname == 0)
+										break;
+
+									//CDbService::rename(table->table_name, newname);
+								}break;
+							case PARAMETER_SET:
+								{
+									char * pParameter = (char*)item->parameter;
+									if (pParameter == 0)
+										break;
+									char * pValue = (char*)item->parameter2;
+									if (pValue == 0)
+										break;
+									if (strcmp(pParameter,"full_memory")==0)
+									{
+										if (CDbService::setoption(OPTION_FULL_MEMORY_MODE,atoi(pValue)))
+											result = 0;
+									}
+								}break;
+							default:
+								break;
+							}
+						}
 					}break;
 				default:
 					break;

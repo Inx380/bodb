@@ -142,6 +142,20 @@ namespace bo
 		m_records.clear();
 		m_records2.clear();
 	}
+	void CResultSet::getFieldEqualList(bo::uinteger fieldId, const CFieldVariant::pointer& variant, std::vector<CRecordLine::pointer>& pOutList)
+	{
+		BoostReadLock rdLock(m_records.mutex());
+		CLockList<CRecordLine::pointer>::iterator pIter = m_records.begin();
+		for (; pIter!=m_records.end(); pIter++)
+		{
+			CRecordLine::pointer pRecordLine = *pIter;
+			if (pRecordLine->equalFieldVariant(fieldId,variant))
+			{
+				pOutList.push_back(pRecordLine);
+			}
+		}
+	}
+
 	void CResultSet::addRecord(const CRecordLine::pointer& record)
 	{
 		BOOST_ASSERT (record.get() != 0);

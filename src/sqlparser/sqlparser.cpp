@@ -1096,6 +1096,10 @@ bool GetFieldItems(const char * sql, tagSP * outSP, int & offset)
 		{
 			offset += leftIndex+1;
 			continue;
+		//}else if (strCompare(sql+offset, "CONSTRAINT", leftIndex))
+		//{
+		//	// CONSTRAINT ebm_group_version_t_PK PRIMARY KEY(group_id)
+		//	offset += leftIndex+10;
 		}else if (strCompare(sql+offset, ")", leftIndex))
 		{
 			offset += leftIndex+1;
@@ -1854,6 +1858,96 @@ tagSP * parse_exec(const char * sql)
 		{
 			result->dbname = tempBuffer;
 		}break;
+	case SQLCOM_ALTER_DATABASE:
+		{
+			//ALTER DATABASE name [ [ WITH ] option [ ... ] ]
+			// 
+			//where option can be:
+			// 
+			//    CONNECTION LIMIT connlimit
+			// 
+			//ALTER DATABASE name SET parameter { TO | = } { value | DEFAULT }
+			//ALTER DATABASE name RESET parameter
+			//
+			//ALTER DATABASE name RENAME TO newname
+			//
+			//ALTER DATABASE name OWNER TO new_owner
+
+			result->dbname = tempBuffer;
+			if (strCompare(sql+leftoffset, "RENAME", leftIndex))
+			{
+				// ???Î´ÊµÏÖ£»
+				leftoffset += leftIndex+7;
+				if (!strCompare(sql+leftoffset, "TO", leftIndex))
+				{
+					parse_free(result);
+					result = 0;
+					return result;
+				}
+				leftoffset += leftIndex+3;
+
+				tempBuffer = new char[MAX_ITEM_STRING_SIZE];
+				if (!strGetWord2(sql+leftoffset, tempBuffer, leftIndex, &wordLen))
+				{
+					delete[] tempBuffer;
+					parse_free(result);
+					result = 0;
+					return result;
+				}
+				leftoffset += leftIndex+wordLen;
+
+				tagParameter * parameter = new tagParameter;
+				memset(parameter, 0, sizeof(tagParameter));
+				parameter->param_type = PARAMETER_RENAME;
+				parameter->parameter = tempBuffer;
+				AddItem(result, PARAM_ITEM, parameter);
+			}else if (strCompare(sql+leftoffset, "SET", leftIndex))
+			{
+				leftoffset += leftIndex+4;
+
+				tempBuffer = new char[MAX_ITEM_STRING_SIZE];
+				if (!strGetWord2(sql+leftoffset, tempBuffer, leftIndex, &wordLen))
+				{
+					delete[] tempBuffer;
+					parse_free(result);
+					result = 0;
+					return result;
+				}
+				leftoffset += leftIndex+wordLen;
+
+				if (!strCompare(sql+leftoffset, "=", leftIndex))
+				{
+					delete[] tempBuffer;
+					parse_free(result);
+					result = 0;
+					return result;
+				}
+				leftoffset += leftIndex + 1;
+
+				char* tempBuffer2 = new char[MAX_ITEM_STRING_SIZE];
+				if (!strGetWord2(sql+leftoffset, tempBuffer2, leftIndex, &wordLen))
+				{
+					delete[] tempBuffer;
+					delete[] tempBuffer2;
+					parse_free(result);
+					result = 0;
+					return result;
+				}
+				leftoffset += leftIndex+wordLen;
+
+
+				tagParameter * parameter = new tagParameter;
+				memset(parameter, 0, sizeof(tagParameter));
+				parameter->param_type = PARAMETER_SET;
+				parameter->parameter = tempBuffer;
+				parameter->parameter2 = tempBuffer2;
+				AddItem(result, PARAM_ITEM, parameter);
+			}else
+			{
+				break;
+			}
+
+		}break;
 	case SQLCOM_ALTER_TABLE:
 		{
 			AddTableItem(result, tempBuffer);
@@ -2118,8 +2212,12 @@ void free_param(tagParameter * param)
 		{
 		case PARAMETER_DROPTABLE:
 		case PARAMETER_RENAME:
+		case PARAMETER_SET:
 			{
 				char * buffer = (char*)param->parameter;
+				if (buffer != 0)
+					delete[] buffer;
+				buffer = (char*)param->parameter2;
 				if (buffer != 0)
 					delete[] buffer;
 			}break;

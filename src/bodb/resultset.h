@@ -48,6 +48,7 @@ namespace bo
 		bool empty(void) const;
 
 		void close(void);
+		void getFieldEqualList(bo::uinteger fieldId, const CFieldVariant::pointer& variant, std::vector<CRecordLine::pointer>& pOutList);
 		void addRecord(const CRecordLine::pointer& record);
 		CRecordLine::pointer getRecord(uinteger recordId);
 

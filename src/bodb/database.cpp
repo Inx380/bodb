@@ -56,6 +56,7 @@ namespace bo
 		, m_curpageid(0)
 	{
 		m_bLoadError = false;
+		m_bFullMemory = false;
 	}
 	CDatabase::CDatabase(const CDatabaseInfo::pointer& dbinfo)
 		: m_dbinfo(dbinfo)
@@ -64,6 +65,7 @@ namespace bo
 	{
 
 		m_bLoadError = false;
+		m_bFullMemory = false;
 		BOOST_ASSERT (m_dbinfo.get() != 0);
 	}
 	CDatabase::~CDatabase(void)
@@ -140,6 +142,29 @@ namespace bo
 
 		m_killed = false;
 		m_proc = new boost::thread(boost::bind(&CDatabase::proc_db, this));
+
+		CTableInfo::pointer tableInfo = getTableInfo("bodb_sys_option");
+		if (tableInfo.get() != NULL)	// New Create Database
+		{
+			CFieldInfo::pointer fieldOptionInfo = tableInfo->getFieldInfo("option");
+			CFieldInfo::pointer fieldValueInfo = tableInfo->getFieldInfo("value");
+			if (fieldOptionInfo.get() != NULL && fieldValueInfo.get() != NULL)
+			{
+				CFieldVariant::pointer variantOption = CFieldVariant::create(fieldOptionInfo->type());
+				variantOption->setIntu(OPTION_FULL_MEMORY_MODE);
+				CFieldVariant::pointer variantValue = CFieldVariant::create(fieldValueInfo->type());
+				variantValue->setString("1", 1);
+
+				std::list<std::list<CFieldCompare::pointer> > topwheres;
+				std::list<CFieldCompare::pointer> wheres;
+				wheres.push_back(CFieldCompare::create(CFieldCompare::FCT_EQUAL, fieldOptionInfo, variantOption,0));
+				wheres.push_back(CFieldCompare::create(CFieldCompare::FCT_EQUAL, fieldValueInfo, variantValue,0));
+				topwheres.push_back(wheres);
+				CResultSet::pointer rs = select(tableInfo, topwheres, false);
+				if (rs.get()!=NULL && !rs->empty())
+					m_bFullMemory = true;
+			}
+		}
 
 		//m_resultset = CResultSet::create();
 
@@ -489,6 +514,64 @@ namespace bo
 		m_fieldinfopages.clear();
 		m_unusepages.clear();
 	}
+	bool CDatabase::setOption(OptionType nOption, bo::uinteger nValue)
+	{
+		switch (nOption)
+		{
+		case OPTION_FULL_MEMORY_MODE:
+			{
+				const bool bFullMemoryTemp = nValue==1?true:false;
+				if (m_bFullMemory != bFullMemoryTemp)
+				{
+					m_bFullMemory = bFullMemoryTemp;
+
+					CTableInfo::pointer pTableInfo = getTableInfo("bodb_sys_option");
+					if (pTableInfo.get()==NULL)
+						break;
+					CFieldInfo::pointer fieldOptionInfo = pTableInfo->getFieldInfo("option");
+					CFieldInfo::pointer fieldValueInfo = pTableInfo->getFieldInfo("value");
+					if (fieldOptionInfo.get()==NULL || fieldValueInfo.get()==NULL)
+						break;
+
+					CRecordLine::pointer recordLine = CRecordLine::create(pTableInfo);
+					CFieldVariant::pointer pOptionVariant = CFieldVariant::create(bo::FT_INTEGER);
+					pOptionVariant->setIntu(OPTION_FULL_MEMORY_MODE);
+					recordLine->addVariant(fieldOptionInfo, pOptionVariant);
+					CFieldVariant::pointer pValueVariant = CFieldVariant::create(bo::FT_VARCHAR);
+					pValueVariant->setIntu(nValue);
+					recordLine->addVariant(fieldValueInfo, pValueVariant);
+
+					CFieldVariant::pointer variantOption = CFieldVariant::create(fieldOptionInfo->type());
+					variantOption->setIntu(OPTION_FULL_MEMORY_MODE);
+
+					std::list<std::list<CFieldCompare::pointer> > topwheres;
+					std::list<CFieldCompare::pointer> wheres;
+					wheres.push_back(CFieldCompare::create(CFieldCompare::FCT_EQUAL, fieldOptionInfo, pOptionVariant,0));
+					topwheres.push_back(wheres);
+					if (update(pTableInfo, topwheres, recordLine)==0)
+					{
+						insert(recordLine);
+					}
+				}
+			}break;
+		default:
+			return false;
+			break;
+		}
+		return true;
+	}
+	bo::uinteger CDatabase::getOption(OptionType nOption) const
+	{
+		switch (nOption)
+		{
+		case OPTION_FULL_MEMORY_MODE:
+			return m_bFullMemory?1:0;
+			break;
+		default:
+			break;
+		}
+		return 0;
+	}
 
 	bool CDatabase::createTable(const CTableInfo::pointer& tableInfo)
 	{
@@ -694,9 +777,22 @@ namespace bo
 		if (tableInfo.get() == 0)
 		{
 			return false;
+		}else if (tableInfo->name()==newName)
+		{
+			return true;
 		}
-
 		tableInfo->name(newName);
+		m_modifys.add(CModifyInfo::create(CModifyInfo::MIF_UPDATE, tableInfo));
+		return true;
+	}
+	bool CDatabase::update(const tstring & tableName)
+	{
+		if (m_killed) return false;
+		CTableInfo::pointer tableInfo = m_dbinfo->getTableInfo(tableName, false);
+		if (tableInfo.get() == 0)
+		{
+			return false;
+		}
 		m_modifys.add(CModifyInfo::create(CModifyInfo::MIF_UPDATE, tableInfo));
 		return true;
 	}
@@ -788,6 +884,15 @@ namespace bo
 		BOOST_ASSERT (recordLine.get() != 0);
 		BOOST_ASSERT (recordLine->tableInfo().get() != 0);
 
+		CResultSet::pointer resultSet;
+		if (!m_results.find(recordLine->tableInfo().get(), resultSet))
+		{
+			resultSet = CResultSet::create(recordLine->tableInfo());
+			m_results.insert(recordLine->tableInfo().get(), resultSet);
+		}
+		bool bGetFirstPkList = false;
+		std::vector<CRecordLine::pointer> pCheckPkList;
+
 		// build default variant
 		CTableInfo::pointer tableInfo = recordLine->tableInfo();
 		CFieldInfo::pointer fieldInfo =  tableInfo->moveFirst();
@@ -830,22 +935,43 @@ namespace bo
 						}break; 
 					}
 				}
+			}else if (fieldInfo->constraintType()==FIELD_CONSTRAINT_PRIMARYKEY || fieldInfo->constraintType()==FIELD_CONSTRAINT_UNIQUE)
+			{
+				if (!bGetFirstPkList)
+				{
+					bGetFirstPkList = true;
+					resultSet->getFieldEqualList(fieldInfo->id(), variant, pCheckPkList);
+				}else if (!pCheckPkList.empty())
+				{
+					std::vector<CRecordLine::pointer> pCheckPkListTemp;
+					for (size_t i=0;i<pCheckPkList.size(); i++)
+					{
+						CRecordLine::pointer pRecordLine = pCheckPkList[i];
+						if (pRecordLine->equalFieldVariant(fieldInfo->id(),variant))
+						{
+							pCheckPkListTemp.push_back(pRecordLine);
+						}
+					}
+					pCheckPkList.clear();
+					for (size_t i=0;i<pCheckPkListTemp.size(); i++)
+					{
+						pCheckPkList.push_back(pCheckPkListTemp[i]);
+					}
+				}
 			}
 
 			fieldInfo = tableInfo->moveNext();
 		}
-
-
-		CResultSet::pointer resultSet;
-		if (!m_results.find(recordLine->tableInfo().get(), resultSet))
+		if (!pCheckPkList.empty())
 		{
-			resultSet = CResultSet::create(recordLine->tableInfo());
-			m_results.insert(recordLine->tableInfo().get(), resultSet);
+			pCheckPkList.clear();
+			return false;
 		}
+
 		resultSet->addRecord(recordLine);
 		//m_records.insert(recordLine->id(), recordLine);
-
-		m_modifys.add(CModifyInfo::create(CModifyInfo::MIF_ADD, recordLine));
+		if (!m_bFullMemory || tableInfo->type()==CTableInfo::TT_SYSTEM)
+			m_modifys.add(CModifyInfo::create(CModifyInfo::MIF_ADD, recordLine));
 
 		// ? for current_recordid
 		m_modifys.add(CModifyInfo::create(CModifyInfo::MIF_UPDATE, tableInfo));
@@ -1035,7 +1161,8 @@ namespace bo
 			if (compareResult)
 			{
 				result++;
-				m_modifys.add(CModifyInfo::create(CModifyInfo::MIF_DELETE, recordLine));
+				if (!m_bFullMemory || tableInfo->type()==CTableInfo::TT_SYSTEM)
+					m_modifys.add(CModifyInfo::create(CModifyInfo::MIF_DELETE, recordLine));
 				recordLine = resultSet->deleteCurrent();
 			}else
 				recordLine = resultSet->moveNext();
@@ -1424,7 +1551,8 @@ namespace bo
 				if (update)
 				{
 					++result;
-					m_modifys.add(CModifyInfo::create(CModifyInfo::MIF_UPDATE, recordLine));
+					if (!m_bFullMemory || tableInfo->type()==CTableInfo::TT_SYSTEM)
+						m_modifys.add(CModifyInfo::create(CModifyInfo::MIF_UPDATE, recordLine));
 				}
 			}
 
