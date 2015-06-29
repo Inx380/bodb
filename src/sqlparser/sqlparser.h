@@ -182,6 +182,8 @@ namespace bo
 struct tagItemValue
 {
 	enum_value_type		value_type;
+	char *				table_name;
+	char *				field_name;
 	union
 	{
 		char *			value_string;
@@ -221,6 +223,7 @@ struct tagValue
 struct tagWhere
 {
 	bool				and_where;	// true: AND; false: OR
+	char *				table_name;	// default null
 	char *				field_name;
 	enum_compare_type	compare_type;
 	void *				value_handle;
@@ -231,6 +234,7 @@ struct tagWhere
 struct tagItem
 {
 	enum_item_types		item_type;
+	char *				table_name;
 	void *				item_handle;
 };
 
