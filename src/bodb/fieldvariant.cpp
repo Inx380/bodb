@@ -2135,7 +2135,7 @@ namespace bo
 			{
 				FreeBuffer(&v.clobVal, false);
 				char lpszBuffer[24];
-				sprintf(lpszBuffer,"%d",value);
+				sprintf(lpszBuffer,"%f",value);
 				CopyBuffer(&v.clobVal, lpszBuffer, strlen(lpszBuffer));
 			}break;
 		case FT_NCHAR:

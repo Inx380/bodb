@@ -197,7 +197,7 @@ namespace bo
 						}
 
 						const bool distinct = sp->parameter == (void*)1;
-						CResultSet::pointer rs = CDbService::select(pFirstTableInfo, pTableInfoList, topwheres, false);
+						CResultSet::pointer rs = CDbService::select(pFirstTableInfo, topwheres, false);
 						rs->OrderBy(orderbys, sp->orderbydesc==1);
 						rs->LimitOffset(sp->offset, sp->limit);
 						result = rs->size();

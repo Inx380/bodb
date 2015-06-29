@@ -160,8 +160,7 @@ namespace bo
 				wheres.push_back(CFieldCompare::create(tableInfo, CFieldCompare::FCT_EQUAL, fieldOptionInfo, variantOption,0));
 				wheres.push_back(CFieldCompare::create(tableInfo, CFieldCompare::FCT_EQUAL, fieldValueInfo, variantValue,0));
 				topwheres.push_back(wheres);
-				CLockMap<tstring,CTableInfo::pointer> pTableInfoList;
-				CResultSet::pointer rs = select(tableInfo, pTableInfoList, topwheres, false);
+				CResultSet::pointer rs = select(tableInfo, topwheres, false);
 				if (rs.get()!=NULL && !rs->empty())
 					m_bFullMemory = true;
 			}
@@ -1297,7 +1296,8 @@ namespace bo
 		return result;
 	}
 */
-	CResultSet::pointer CDatabase::select(const CTableInfo::pointer& tableInfo, const CLockMap<tstring,CTableInfo::pointer>& pTableInfoList, const std::list<std::list<CFieldCompare::pointer> > & wheres, bool distinct)
+	CResultSet::pointer CDatabase::select(const CTableInfo::pointer& tableInfo, const std::list<std::list<CFieldCompare::pointer> > & wheres, bool distinct)
+	//CResultSet::pointer CDatabase::select(const CTableInfo::pointer& tableInfo, const CLockMap<tstring,CTableInfo::pointer>& pTableInfoList, const std::list<std::list<CFieldCompare::pointer> > & wheres, bool distinct)
 	{
 		if (!this->isopened()|| m_killed) return boNullResultSet;
 		BOOST_ASSERT (tableInfo.get() != 0);
@@ -1313,19 +1313,19 @@ namespace bo
 				for (itersub=wheresub.begin(); itersub!=wheresub.end(); itersub++)
 				{
 					const CTableInfo::pointer& compareTable = (*itersub)->tableInfo();
-					if (pTableInfoList.exist(compareTable->name()))
+					//if (pTableInfoList.exist(compareTable->name()))
 					{
 						pWhereTableList.insert(compareTable->name(), compareTable, false);
 					}
 					const CTableInfo::pointer& compareTable2 = (*itersub)->tableInfo2();
-					if (compareTable2.get()!=0 && pTableInfoList.exist(compareTable2->name()))
+					if (compareTable2.get()!=0 /*&& pTableInfoList.exist(compareTable2->name())*/)
 					{
 						pWhereTableList.insert(compareTable2->name(), compareTable2, false);
 					}
 				}
 			}
 		}
-		const bool bMutilTable = pTableInfoList.size()>1?true:false;
+		const bool bMutilTable = pWhereTableList.size()>1?true:false;
 		bo::uinteger nRecordId = 0;
 
 		CLockMap<void*, CResultSet::pointer> resultstemp1;
@@ -1369,7 +1369,7 @@ namespace bo
 						const CTableInfo::pointer& compareTable2 = pFieldCompare->tableInfo2();
 						const CFieldInfo::pointer& compareField = pFieldCompare->compareField();
 						const CFieldInfo::pointer& compareField2 = pFieldCompare->compareField2();
-						const CFieldVariant::pointer& compareVariant = pFieldCompare->compareVariant();
+						//const CFieldVariant::pointer& compareVariant = pFieldCompare->compareVariant();
 						const short nWhereLevel = pFieldCompare->whereLevel();
 
 						if (resultstemp1.exist(compareTable.get()) && (compareTable2.get()==0 || resultstemp1.exist(compareTable2.get())))
