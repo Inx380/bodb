@@ -55,6 +55,7 @@ enum enum_funciton_type
 enum enum_value_type
 {
 	VALUE_UNKNOWN
+	, VALUE_LETTER	// A-Z & a-z
 	, VALUE_STRING
 	, VALUE_INT
 	, VALUE_BIGINT

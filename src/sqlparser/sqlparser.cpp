@@ -243,7 +243,7 @@ bool strGetValue(const char * pBuffer, char * outBuffer, int & leftIndex, enum_v
 			{
 				if (pBuffer[i1] == '.')
 				{
-					if (valuetype == VALUE_STRING)
+					if (valuetype == VALUE_LETTER)
 					{
 						break;
 					}else if (valuetype == VALUE_REAL)
@@ -261,7 +261,7 @@ bool strGetValue(const char * pBuffer, char * outBuffer, int & leftIndex, enum_v
 				break;
 			}else if (isValidateChar(pBuffer[i1]))
 			{
-				valuetype = VALUE_STRING;
+				valuetype = VALUE_LETTER;
 			}
 			//}else if (isBOOLVALUE(pBuffer[i1]) || isNULLVALUE(pBuffer[i1]) || isDEFAULTVALUE(pBuffer[i1]))
 			//{
@@ -359,9 +359,10 @@ bool GetItemValue(const char * pBuffer, tagItemValue * outItemValue, int & offse
 		delete[] tempBuffer;
 		return false;
 	}
+
 	offset += wordLen;
 	char * pTableName = 0;
-	if (valuetype==VALUE_STRING && strCompare(pBuffer+offset, ".", leftIndex))	// Table.field
+	if (valuetype==VALUE_LETTER && strCompare(pBuffer+offset, ".", leftIndex))	// Table.field
 	{
 		offset += leftIndex+1;
 		pTableName = tempBuffer;
@@ -377,7 +378,6 @@ bool GetItemValue(const char * pBuffer, tagItemValue * outItemValue, int & offse
 		outItemValue->field_name = tempBuffer;
 		return true;
 	}
-
 
 	if (valuetype == VALUE_STRING)
 	{
