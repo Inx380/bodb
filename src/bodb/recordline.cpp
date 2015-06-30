@@ -98,23 +98,23 @@ namespace bo
 		return result;
 	}
 
-	void CRecordLine::addVariant(const CFieldInfo::pointer& fieldInfo, const CFieldVariant::pointer& variant)
+	void CRecordLine::addVariant(const CFieldInfo::pointer& fieldInfo, const CFieldVariant::pointer& variant, bool bAddForce)
 	{
 		BOOST_ASSERT (fieldInfo.get() != 0);
 		BOOST_ASSERT (variant.get() != 0);
 		//BoostWriteLock wtlock(m_mutex);
 		//boost::mutex::scoped_lock lock(m_mutex);
-		m_variants.insert(fieldInfo->id(), variant);
-		m_variants2.insert(fieldInfo->name(), variant);
+		m_variants.insert(fieldInfo->id(), variant, bAddForce);
+		m_variants2.insert(fieldInfo->name(), variant, bAddForce);
 		//m_curiter = m_variants.end();	// restart for m_curiter
 	}
-	void CRecordLine::addVariant(bo::uinteger fieldId, const tstring& fieldName, const CFieldVariant::pointer& variant)
+	void CRecordLine::addVariant(bo::uinteger fieldId, const tstring& fieldName, const CFieldVariant::pointer& variant, bool bAddForce)
 	{
 		BOOST_ASSERT (variant.get() != 0);
 		//BoostWriteLock wtlock(m_mutex);
-		m_variants.insert(fieldId, variant);
+		m_variants.insert(fieldId, variant, bAddForce);
 		if (!fieldName.empty())
-			m_variants2.insert(fieldName, variant);
+			m_variants2.insert(fieldName, variant, bAddForce);
 		//m_curiter = m_variants.end();	// restart for m_curiter
 	}
 
@@ -520,7 +520,7 @@ namespace bo
 		//}
 		return pResult;
 	}
-	void CRecordLine::AddRecordLine(const CRecordLine::pointer& pRecordLine)
+	void CRecordLine::AddRecordLine(const CRecordLine::pointer& pRecordLine, bool bAddForce)
 	{
 		const CLockMap<uinteger, CFieldVariant::pointer>& pVariantList = pRecordLine->GetVariantList();
 		AUTO_CONST_RLOCK(pVariantList);
@@ -529,7 +529,7 @@ namespace bo
 		{
 			const uinteger fieldId = pIter->first;;
 			CFieldVariant::pointer fieldVariant = pIter->second;
-			addVariant(fieldId,"",fieldVariant);
+			addVariant(fieldId,"",fieldVariant, bAddForce);
 		}
 
 		//CFieldVariant::pointer fieldVariant = pRecordLine->moveFirst();
@@ -604,7 +604,7 @@ namespace bo
 
 	CRecordLine::CRecordLine(uinteger id, const CTableInfo::pointer& tableInfo)
 		: m_id(id), m_tableInfo(tableInfo)
-		//, m_nExtData(0)
+		, m_nExtData(0)
 	{
 		BOOST_ASSERT (m_tableInfo.get() != 0);
 		//m_curiter = m_variants.begin();

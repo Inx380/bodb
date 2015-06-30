@@ -29,7 +29,7 @@
 
 namespace bo
 {
-//#define RECORD_LINE_EXT_DATA_TRUE_RESULT_FLAG	0x1
+#define RECORD_LINE_EXT_DATA_TRUE_RESULT_FLAG	0x1
 //#define RECORD_LINE_EXT_DATA_DELETE_FLAG		0x2
 
 	class CRecordLine
@@ -44,8 +44,8 @@ namespace bo
 		bool equalFieldVariant(uinteger fieldId, const CFieldVariant::pointer& compare) const;
 		bool doCompareFieldVariant(uinteger fieldId, CFieldCompare::FieldCompareType compareType, const CFieldVariant::pointer& compare) const;
 
-		void addVariant(const CFieldInfo::pointer& fieldInfo, const CFieldVariant::pointer& variant);
-		void addVariant(bo::uinteger fieldId, const tstring& fieldName, const CFieldVariant::pointer& variant);
+		void addVariant(const CFieldInfo::pointer& fieldInfo, const CFieldVariant::pointer& variant, bool bAddForce = true);
+		void addVariant(bo::uinteger fieldId, const tstring& fieldName, const CFieldVariant::pointer& variant, bool bAddForce = true);
 		void delVariant(const CFieldInfo::pointer& fieldInfo);
 
 		bool addVariant(const tstring & fieldName, bool value);
@@ -74,7 +74,7 @@ namespace bo
 		void setVariantNull(const CFieldInfo::pointer& fieldInfo);
 
 		CRecordLine::pointer Clone(bo::uinteger recordId) const;
-		void AddRecordLine(const CRecordLine::pointer& pRecordLine);
+		void AddRecordLine(const CRecordLine::pointer& pRecordLine, bool bAddForce = true);
 		const CLockMap<uinteger, CFieldVariant::pointer>& GetVariantList(void) const {return m_variants;}
 		//CFieldVariant::pointer moveFirst(void);
 		//CFieldVariant::pointer moveNext(void);
@@ -89,7 +89,7 @@ namespace bo
 		CTableInfo::pointer	tableInfo(void) const {return m_tableInfo;}
 		
 		usmallint getLineSize(void) const;
-		//bo::uinteger m_nExtData;
+		bo::uinteger m_nExtData;
 	public:
 		CRecordLine(uinteger id, const CTableInfo::pointer& tableInfo);
 		virtual ~CRecordLine(void);
