@@ -260,9 +260,20 @@ namespace bo
 										for (j=0; j<(*outResultSet)->rsvalues[i]->fieldcount; j++)
 										{
 											PFIELDVARIANT fieldVariantCompare = (*outResultSet)->rsvalues[i]->fieldvalues[j];
+											const char * tablename = (const char *)sp->items->items[j]->table_name;
 											const char * fieldname = (const char *)sp->items->items[j]->item_handle;
-											CFieldVariant::pointer fieldVariant = recordLine->getVariant(fieldname);
-
+											CFieldVariant::pointer fieldVariant;
+											CTableInfo::pointer pTableInfo;
+											if (tablename==0)
+											{
+												fieldVariant = recordLine->getVariant(fieldname);
+											}else if (pTableInfoList.find(tablename,pTableInfo))
+											{
+												CFieldInfo::pointer pFieldInfo = pTableInfo->getFieldInfo(fieldname);
+												if (pFieldInfo.get()==0)
+													break;
+												fieldVariant = recordLine->getVariant(pFieldInfo->id());
+											}
 											BOOST_ASSERT (fieldVariant.get() != NULL);
 											if(!fieldVariant->equal(CFieldVariant::create(fieldVariantCompare)))
 											{

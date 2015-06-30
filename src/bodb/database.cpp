@@ -1347,7 +1347,7 @@ namespace bo
 				return result;
 			}
 
-			bool bCompareFinished = false;
+			bool bCompareFinished = wheres.empty()?true:false;
 			std::vector<CRecordLine::pointer> pFinishedRecordLineTrueTempList;
 			//CRecordLine::pointer pFinishedRecordLineTrueTemp;
 			const CLockList<CRecordLine::pointer>& pRecordList = tableResultSet->GetRecordList();
