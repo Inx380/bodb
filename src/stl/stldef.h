@@ -3,7 +3,7 @@
 #define __stldef_h__
 
 #include "cgcSmartString.h"
-using namespace cgc;
+using namespace mycp;
 #include <list>
 #include <map>
 #include <algorithm>
